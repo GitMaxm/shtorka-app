@@ -1,7 +1,7 @@
 #!/bin/bash
 # Собирает «Шторку». Xcode не нужен — хватает Command Line Tools.
 #
-#   ./build.sh            собрать build/Шторка.app
+#   ./build.sh            собрать build/Shtorka.app
 #   ./build.sh --install  ещё и поставить в /Applications и перезапустить
 #   ./build.sh --dmg      ещё и собрать ../Shtorka.dmg для релиза на GitHub
 #   ./build.sh --selftest только прогнать самопроверку (отдельная тестовая сборка, приложение не трогает)
@@ -16,11 +16,11 @@ if [[ "${1:-}" == "--selftest" ]]; then
   pkill -x Shtorka && echo "(Шторка закрыта на время теста)" || true
   status=0
   build/selftest/Shtorka-selftest --selftest "$PWD/build/selftest" || status=$?
-  [[ -d "/Applications/Шторка.app" ]] && open "/Applications/Шторка.app"
+  [[ -d "/Applications/Shtorka.app" ]] && open "/Applications/Shtorka.app"
   exit $status
 fi
 
-APP="build/Шторка.app"
+APP="build/Shtorka.app"
 BIN="$APP/Contents/MacOS/Shtorka"
 
 rm -rf build
@@ -32,6 +32,7 @@ for arch in arm64 x86_64; do
 done
 lipo -create -output "$BIN" build/Shtorka-arm64 build/Shtorka-x86_64
 cp Info.plist "$APP/Contents/Info.plist"
+cp -R ru.lproj "$APP/Contents/Resources/"
 
 # Иконка: рисуем PNG самим приложением и собираем .icns
 ICONSET="build/AppIcon.iconset"
@@ -52,15 +53,15 @@ for arg in "$@"; do
     --install)
       pkill -x Shtorka || true
       sleep 0.5
-      rm -rf "/Applications/Шторка.app"
-      ditto "$APP" "/Applications/Шторка.app"
-      open "/Applications/Шторка.app"
+      rm -rf "/Applications/Shtorka.app" "/Applications/Шторка.app"
+      ditto "$APP" "/Applications/Shtorka.app"
+      open "/Applications/Shtorka.app"
       echo "Установлено в /Applications и запущено"
       ;;
     --dmg)
       STAGE="build/dmg"
       mkdir -p "$STAGE"
-      ditto "$APP" "$STAGE/Шторка.app"
+      ditto "$APP" "$STAGE/Shtorka.app"
       ln -s /Applications "$STAGE/Программы"
       rm -f ../Shtorka.dmg
       hdiutil create -quiet -volname "Шторка" -srcfolder "$STAGE" -ov -format UDZO ../Shtorka.dmg

@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         actions.hidePanel = { [weak self] in self?.panel.hide() }
         actions.flashPanel = { [weak self] seconds in self?.panel.show(holdFor: seconds) }
         setupStatusItem()
+        removeOldCopy()
         enableLoginItemOnFirstLaunch()
         store.reload()
         clipboard.start()
@@ -68,14 +69,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - Автозапуск
 
     /// При первом запуске из «Программ» сразу добавляем Шторку в объекты входа.
+    /// Если Шторку перенесли или переименовали — перепривязываем автозапуск к новому месту.
     private func enableLoginItemOnFirstLaunch() {
-        let key = "didSetUpLoginItem"
+        let key = "didSetUpLoginItem", pathKey = "loginItemPath"
+        let defaults = UserDefaults.standard
         let path = Bundle.main.bundlePath
         let installed = path.hasPrefix("/Applications/") || path.hasPrefix(NSHomeDirectory() + "/Applications/")
-        guard installed, !UserDefaults.standard.bool(forKey: key) else { return }
-        UserDefaults.standard.set(true, forKey: key)
-        try? SMAppService.mainApp.register()
+        guard installed else { return }
+        if !defaults.bool(forKey: key) {
+            defaults.set(true, forKey: key)
+            try? SMAppService.mainApp.register()
+        } else if defaults.string(forKey: pathKey) != path, SMAppService.mainApp.status == .enabled {
+            try? SMAppService.mainApp.unregister()
+            try? SMAppService.mainApp.register()
+        }
+        defaults.set(path, forKey: pathKey)
         NSLog("Shtorka login item status: \(SMAppService.mainApp.status.rawValue)")
+    }
+
+    /// Версия 1.0 лежала в «Шторка.app». Если она осталась рядом — закрываем её и убираем в Корзину,
+    /// чтобы в «Программах» не было двух Шторок.
+    private func removeOldCopy() {
+        let current = Bundle.main.bundleURL.standardizedFileURL
+        let old = current.deletingLastPathComponent().appendingPathComponent("Шторка.app")
+        guard current.lastPathComponent != old.lastPathComponent,
+              let id = Bundle.main.bundleIdentifier,
+              Bundle(url: old)?.bundleIdentifier == id else { return }
+        for app in NSRunningApplication.runningApplications(withBundleIdentifier: id)
+        where app.bundleURL?.standardizedFileURL.path == old.path {
+            app.forceTerminate()
+        }
+        NSWorkspace.shared.recycle([old]) { _, error in
+            if let error { NSLog("Shtorka: не удалось убрать старую копию: \(error)") }
+        }
     }
 
     private func toggleLoginItem() {

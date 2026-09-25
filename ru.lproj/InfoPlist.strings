@@ -1,0 +1,3 @@
+/* Имя в Finder, Spotlight и Dock; файл называется Shtorka.app */
+CFBundleName = "Шторка";
+CFBundleDisplayName = "Шторка";

@@ -11,9 +11,11 @@
 	<key>CFBundleIdentifier</key>
 	<string>local.shtorka</string>
 	<key>CFBundleName</key>
-	<string>Шторка</string>
+	<string>Shtorka</string>
 	<key>CFBundleDisplayName</key>
-	<string>Шторка</string>
+	<string>Shtorka</string>
+	<key>LSHasLocalizedDisplayName</key>
+	<true/>
 	<key>CFBundleExecutable</key>
 	<string>Shtorka</string>
 	<key>CFBundleIconFile</key>
@@ -23,9 +25,9 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Maxim Ivanenko</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>1.0.1</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>2</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>

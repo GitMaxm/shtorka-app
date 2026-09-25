@@ -40,7 +40,7 @@ macOS 14 Sonoma или новее, Apple Silicon и Intel.
 Нужны Command Line Tools (`xcode-select --install`). Swift, SwiftUI и AppKit, без зависимостей.
 
 ```bash
-./build.sh             # build/Шторка.app
+./build.sh             # build/Shtorka.app
 ./build.sh --install   # установить в /Applications и запустить
 ./build.sh --dmg       # собрать установщик ../Shtorka.dmg
 ./build.sh --selftest  # самопроверка
