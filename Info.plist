@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>ru</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ru</string>
+	</array>
+	<key>CFBundleIdentifier</key>
+	<string>local.shtorka</string>
+	<key>CFBundleName</key>
+	<string>Шторка</string>
+	<key>CFBundleDisplayName</key>
+	<string>Шторка</string>
+	<key>CFBundleExecutable</key>
+	<string>Shtorka</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Maxim Ivanenko</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>local.shtorka.tool</string>
+			<key>UTTypeDescription</key>
+			<string>Инструмент Шторки</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Шторка переключает светлую и тёмную тему через System Events.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>Шторка показывает твои последние скриншоты с рабочего стола.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Шторка показывает твои последние скриншоты.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Шторка показывает твои последние скриншоты.</string>
+</dict>
+</plist>
