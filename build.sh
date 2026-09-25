@@ -3,7 +3,7 @@
 #
 #   ./build.sh            собрать build/Шторка.app
 #   ./build.sh --install  ещё и поставить в /Applications и перезапустить
-#   ./build.sh --dmg      ещё и собрать ../Шторка.dmg для коллег (перетащить в «Программы» — и готово)
+#   ./build.sh --dmg      ещё и собрать ../Shtorka.dmg для релиза на GitHub
 #   ./build.sh --selftest только прогнать самопроверку (отдельная тестовая сборка, приложение не трогает)
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -62,9 +62,9 @@ for arg in "$@"; do
       mkdir -p "$STAGE"
       ditto "$APP" "$STAGE/Шторка.app"
       ln -s /Applications "$STAGE/Программы"
-      rm -f ../Шторка.dmg
-      hdiutil create -quiet -volname "Шторка" -srcfolder "$STAGE" -ov -format UDZO ../Шторка.dmg
-      echo "Установщик для коллег: ../Шторка.dmg"
+      rm -f ../Shtorka.dmg
+      hdiutil create -quiet -volname "Шторка" -srcfolder "$STAGE" -ov -format UDZO ../Shtorka.dmg
+      echo "Установщик: ../Shtorka.dmg"
       ;;
   esac
 done

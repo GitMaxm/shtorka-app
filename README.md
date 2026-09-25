@@ -41,7 +41,7 @@ macOS 14 Sonoma или новее, Apple Silicon и Intel.
 ```bash
 ./build.sh             # build/Шторка.app
 ./build.sh --install   # установить в /Applications и запустить
-./build.sh --dmg       # собрать установщик .dmg
+./build.sh --dmg       # собрать установщик ../Shtorka.dmg
 ./build.sh --selftest  # самопроверка
 ```
 
