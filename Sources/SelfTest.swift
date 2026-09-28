@@ -102,17 +102,24 @@ enum SelfTest {
     /// Открывается ли шторка поверх окна «на весь экран» — обычного развёрнутого и полноэкранного.
     private static func fullscreenScenario(controller: PanelController, state: AppState) async {
         section("Поверх окна на весь экран")
-        let window = controller.panel
         let original = CGEvent(source: nil)?.location ?? .zero
         let bounds = CGDisplayBounds(CGMainDisplayID())
         controller.followsCursor = true
-        for mode in ["maximized", "fullscreen"] {
+        for step in ["maximized", "fullscreen", "fullscreen после замены окна"] {
+            let mode = step.hasPrefix("fullscreen") ? "fullscreen" : "maximized"
             controller.hide()
+            if step.contains("замены") {
+                await sleep(0.6)
+                let old = controller.panel
+                controller.rebuildPanel(reason: "самопроверка")
+                check(controller.panel !== old && !old.isVisible, "окно шторки заменено на новое")
+            }
             let helper = Process()
-            helper.executableURL = Bundle.main.executableURL
+            helper.executableURL = helperApp()
             helper.arguments = ["--fullscreen-helper", mode]
             try? helper.run()
             await sleep(mode == "fullscreen" ? 4.0 : 1.5)
+            print("   заглушка — приложение \(NSRunningApplication(processIdentifier: helper.processIdentifier)?.bundleIdentifier ?? "?")")
             let covering = helperCoversScreen(pid: helper.processIdentifier)
             print("   \(mode): окно-заглушка \(covering ? "закрывает весь экран" : "НЕ закрывает весь экран")")
             CGWarpMouseCursorPosition(CGPoint(x: bounds.midX, y: bounds.midY))
@@ -124,8 +131,9 @@ enum SelfTest {
             let onScreen = NSScreen.screens.contains { NSMouseInRect(p, $0.frame, false) }
             print("   курсор у края: \(p), экран \(NSScreen.main!.frame), «на экране» по NSMouseInRect: \(onScreen)")
             await sleep(0.8)
+            let window = controller.panel   // Шторка могла сама сменить окно, пока заглушка разворачивалась
             check(window.isVisible && state.isOpen && window.isOnActiveSpace,
-                  mode == "fullscreen" ? "курсор у выемки над полноэкранным окном — шторка открылась"
+                  mode == "fullscreen" ? "курсор у выемки над полноэкранным окном — шторка открылась (\(step))"
                                        : "курсор у выемки над развёрнутым окном — шторка открылась",
                   "visible=\(window.isVisible) open=\(state.isOpen) onSpace=\(window.isOnActiveSpace) cursor=\(NSEvent.mouseLocation) screen=\(NSScreen.main!.frame)")
             // Порядок окон у верхнего края: что лежит поверх чего (первое — самое верхнее).
@@ -147,6 +155,31 @@ enum SelfTest {
             await sleep(mode == "fullscreen" ? 2.5 : 0.6)
         }
         CGWarpMouseCursorPosition(original)
+    }
+
+    /// Заглушка должна быть *другим* приложением, как WebStorm: своё полноэкранное окно macOS пускает
+    /// Шторку всегда, а чужое — только при правильных флагах. Поэтому собираем отдельный .app со своим id.
+    private static func helperApp() -> URL {
+        let app = outDir.appendingPathComponent("FullscreenHelper.app")
+        let macos = app.appendingPathComponent("Contents/MacOS")
+        try? FileManager.default.removeItem(at: app)
+        try? FileManager.default.createDirectory(at: macos, withIntermediateDirectories: true)
+        let exe = macos.appendingPathComponent("FullscreenHelper")
+        try? FileManager.default.copyItem(at: Bundle.main.executableURL!, to: exe)
+        let plist: [String: Any] = [
+            "CFBundleIdentifier": "local.shtorka.fullscreen-helper",
+            "CFBundleName": "FullscreenHelper",
+            "CFBundleExecutable": "FullscreenHelper",
+            "CFBundlePackageType": "APPL",
+        ]
+        try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+            .write(to: app.appendingPathComponent("Contents/Info.plist"))
+        let sign = Process()
+        sign.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        sign.arguments = ["--force", "--sign", "-", app.path]
+        try? sign.run()
+        sign.waitUntilExit()
+        return exe
     }
 
     private static func helperCoversScreen(pid: Int32) -> Bool {
@@ -220,6 +253,8 @@ enum SelfTest {
         }
         if ProcessInfo.processInfo.environment["FULLSCREEN_ONLY"] != nil {
             await fullscreenScenario(controller: controller, state: state)
+            controller.followsCursor = false
+            await firstClickScenario(controller: controller, state: state)   // клики уже по новому окну
             restorePasteboard(savedPasteboard)
             try? fm.removeItem(at: sandbox)
             return

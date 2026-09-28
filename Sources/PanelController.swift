@@ -27,14 +27,16 @@ final class ShadePanel: NSPanel {
         isOpaque = false
         hasShadow = false
         hidesOnDeactivate = false
+        isReleasedWhenClosed = false
         isMovable = false
         acceptsMouseMovedEvents = true
         appearance = NSAppearance(named: .darkAqua)
     }
 
     static let shadeLevel = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.popUpMenuWindow)))
-    /// На всех рабочих столах, включая полноэкранные приложения.
-    static let shadeBehavior: NSWindow.CollectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+    /// На всех рабочих столах, включая полноэкранные столы других приложений.
+    static let shadeBehavior: NSWindow.CollectionBehavior = [.canJoinAllSpaces, .canJoinAllApplications, .fullScreenAuxiliary,
+                                                             .stationary, .ignoresCycle]
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
@@ -87,8 +89,9 @@ final class PanelController: NSObject, NSMenuDelegate {
     private let shelf: ShelfStore
     private let ports: PortsStore
     private let actions: PanelActions
-    let panel = ShadePanel()
+    private(set) var panel = ShadePanel()
     private var hosting: FirstMouseHostingView<PanelView>!
+    private var container: DropContainerView!
     private var timer: Timer?
 
     private var isShown = false
@@ -119,12 +122,21 @@ final class PanelController: NSObject, NSMenuDelegate {
         actions.onDragChanged = { [weak self] dragging in self?.dragChanged(dragging) }
         hosting = FirstMouseHostingView(rootView: PanelView(state: state, store: store, clipboard: clipboard, tools: tools,
                                                            shelf: shelf, ports: ports, actions: actions, topInset: 0))
-        let container = DropContainerView(frame: .zero)
+        container = DropContainerView(frame: .zero)
         hosting.autoresizingMask = [.width, .height]
         container.addSubview(hosting)
         container.onHover = { [weak self] hovering in self?.state.dropHover = hovering }
         container.onDrop = { [weak self] pasteboard in self?.actions.acceptDrop(pasteboard) ?? false }
         panel.contentView = container
+
+        // После сна и смены мониторов macOS иногда перестаёт пускать старое окно на полноэкранные столы —
+        // заранее меняем его на свежее.
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.rebuildPanelIfHidden(reason: "после сна") }
+        }
+        NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.rebuildPanelIfHidden(reason: "сменились экраны") }
+        }
 
         let timer = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
@@ -185,11 +197,35 @@ final class PanelController: NSObject, NSMenuDelegate {
             PanelLog.write("открыта (попытка \(attempt)): впереди \(PanelLog.frontApp), на текущем столе \(onSpace), "
                            + "видна \(visible), поверх неё: \(PanelLog.windowsAbove(self.panel))")
             guard !(onSpace && visible), attempt < 3 else { return }
-            self.panel.collectionBehavior = ShadePanel.shadeBehavior
-            self.panel.orderOut(nil)
-            self.panel.orderFrontRegardless()
+            if onSpace {
+                self.panel.orderOut(nil)
+                self.panel.orderFrontRegardless()
+            } else {
+                self.rebuildPanel(reason: "не попала на текущий стол")
+            }
             self.checkPlacement(attempt: attempt + 1)
         }
+    }
+
+    /// Меняет окно шторки на новое, переносит в него содержимое. Свежее окно macOS пускает
+    /// на полноэкранный стол, даже когда старое туда уже не попадает.
+    func rebuildPanel(reason: String) {
+        let old = panel
+        let fresh = ShadePanel()
+        old.contentView = nil
+        fresh.contentView = container
+        fresh.setFrame(old.frame, display: false)
+        hosting.frame = container.bounds
+        fresh.ignoresMouseEvents = old.ignoresMouseEvents
+        panel = fresh
+        if old.isVisible { fresh.orderFrontRegardless() }
+        old.orderOut(nil)
+        PanelLog.write("новое окно шторки: \(reason)")
+    }
+
+    private func rebuildPanelIfHidden(reason: String) {
+        guard !isShown else { return }
+        rebuildPanel(reason: reason)
     }
 
     func hide() {
